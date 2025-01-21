@@ -5,6 +5,7 @@ defmodule Astarte.ExportTest do
   alias Astarte.Export.FetchData
   alias Astarte.DatabaseTestdata
   @realm "test"
+  @db_host_and_port "localhost:9042"
 
   @expected_xml """
   <?xml version="1.0" encoding="UTF-8"?>
@@ -77,9 +78,22 @@ defmodule Astarte.ExportTest do
     assert @expected_xml == File.read!(file)
   end
 
+  test "export realm data to xml file with db_host_and_port"  do
+    DatabaseTestdata.initialize_database()
+    assert {:ok, :export_completed} == Export.export_realm_data(@realm, "test.xml", @db_host_and_port)
+    file = Path.expand("test.xml") |> Path.absname()
+    assert @expected_xml == File.read!(file)
+  end
+
   test "export realm data to xmlfile in a absolute path " do
     file = File.cwd!() <> "/test.xml"
     assert {:ok, :export_completed} == Export.export_realm_data(@realm, file)
+    assert @expected_xml == File.read!(file)
+  end
+
+  test "export realm data to xml file with db_host_and_port in absolute path" do
+    file = File.cwd!() <> "/test.xml"
+    assert {:ok, :export_completed} == Export.export_realm_data(@realm, file, @db_host_and_port)
     assert @expected_xml == File.read!(file)
   end
 
