@@ -41,11 +41,21 @@ defmodule Astarte.Import.PopulateDB do
     ]
   end
 
-  def populate(realm, xml, continuation_fun \\ :undefined) do
+  def populate(realm, xml, continuation_fun \\ :undefined, opts \\ []) do
     Logger.info("Import started.", realm: realm)
 
-    nodes = Application.get_env(:cqerl, :cassandra_nodes)
-    {host, port} = Enum.random(nodes)
+    db_host_and_port = Keyword.get(opts, :db_host_and_port)
+
+    [host, port] =
+      case db_host_and_port do
+        nil ->
+          nodes = Application.get_env(:cqerl, :cassandra_nodes)
+          Enum.random(nodes) |> Tuple.to_list()
+
+        _ ->
+          split_db_host_and_port(db_host_and_port)
+      end
+
     Logger.info("Connecting to #{host}:#{port} cassandra database.", realm: realm)
 
     {:ok, xandra_conn} = Xandra.start_link(nodes: ["#{host}:#{port}"])
@@ -444,8 +454,8 @@ defmodule Astarte.Import.PopulateDB do
 
   defp to_native_type(value_chars, :boolean) do
     case value_chars do
-      'true' -> {:ok, true}
-      'false' -> {:ok, false}
+      ~c"true" -> {:ok, true}
+      ~c"false" -> {:ok, false}
       _any -> {:error, :invalid_value}
     end
   end
@@ -583,5 +593,9 @@ defmodule Astarte.Import.PopulateDB do
 
       Map.put(acc, endpoint_key_token, value_type)
     end)
+  end
+
+  defp split_db_host_and_port(db_host_and_port) do
+    String.split(db_host_and_port, ":")
   end
 end
